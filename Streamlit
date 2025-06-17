@@ -1,0 +1,55 @@
+import streamlit as st
+import random
+
+def generate_crash_point():
+    r = random.uniform(0.01, 0.99)
+    return round(max(1.01, min(100, 1 / (1 - r))), 2)
+
+def play_round(balance, bet, auto_cashout):
+    crash_point = generate_crash_point()
+    win = crash_point >= auto_cashout
+
+    if win:
+        payout = round(bet * auto_cashout, 2)
+        balance += payout - bet
+        profit = payout - bet
+        result = f"✅ WON! Crash: {crash_point}x | Cashed at: {auto_cashout}x | +₦{profit}"
+    else:
+        balance -= bet
+        result = f"❌ LOST! Crash: {crash_point}x | Auto Cashout: {auto_cashout}x | -₦{bet}"
+    
+    return balance, result, crash_point
+
+st.set_page_config(page_title="Crash Game Simulator", layout="centered")
+st.title("🎮 Crash Game Strategy Simulator")
+st.markdown("**Simulate crash games. Practice your timing and cashout strategy – no risk!**")
+
+if 'balance' not in st.session_state:
+    st.session_state.balance = 1000.0
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
+col1, col2 = st.columns(2)
+with col1:
+    starting_balance = st.number_input("Starting Balance (₦)", min_value=100.0, value=st.session_state.balance, step=100.0)
+    st.session_state.balance = starting_balance
+with col2:
+    rounds = st.slider("Rounds to Simulate", 1, 100, 1)
+
+bet = st.number_input("Bet Amount (₦)", min_value=10.0, value=50.0, step=10.0)
+auto_cashout = st.slider("Auto Cashout Multiplier", 1.01, 20.0, 2.00, step=0.01)
+
+if st.button("🚀 Simulate"):
+    for i in range(rounds):
+        st.session_state.balance, outcome, crash = play_round(st.session_state.balance, bet, auto_cashout)
+        st.session_state.history.append(f"Round {len(st.session_state.history)+1}: {outcome}")
+    st.success(f"New Balance: ₦{round(st.session_state.balance, 2)}")
+
+with st.expander("📜 Round History"):
+    for h in reversed(st.session_state.history[-50:]):
+        st.write(h)
+
+if st.button("🔄 Reset"):
+    st.session_state.balance = 1000.0
+    st.session_state.history = []
+    st.experimental_rerun()
